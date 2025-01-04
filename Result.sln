@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Result", "Result\Result.csproj", "{5AC7403F-233B-4F18-9917-1CB742CDD231}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Result.Abstractions", "Result.Abstractions\Result.Abstractions.csproj", "{41EE5933-22DE-4B22-B48D-B7CDE1525856}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5AC7403F-233B-4F18-9917-1CB742CDD231}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AC7403F-233B-4F18-9917-1CB742CDD231}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5AC7403F-233B-4F18-9917-1CB742CDD231}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5AC7403F-233B-4F18-9917-1CB742CDD231}.Release|Any CPU.Build.0 = Release|Any CPU
+		{41EE5933-22DE-4B22-B48D-B7CDE1525856}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{41EE5933-22DE-4B22-B48D-B7CDE1525856}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{41EE5933-22DE-4B22-B48D-B7CDE1525856}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{41EE5933-22DE-4B22-B48D-B7CDE1525856}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
