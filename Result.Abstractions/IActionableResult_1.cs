@@ -114,6 +114,4 @@ public interface IActionableResult<TValue, TResult> : IResult<TValue>
     /// This method uses a default failure function that returns a failed result with the errors in the result.
     /// </remarks>
     IActionableResult<TR> Match<TR>(Func<TValue, IActionableResult<TR>> onSuccess) where TR : IActionableResult<TR>;
-
-    IResult Test(IResult some);
 }
