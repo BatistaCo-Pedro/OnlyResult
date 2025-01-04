@@ -1,4 +1,4 @@
-namespace Result.src;
+namespace Result;
 
 /// <summary>
 /// Default implementation of <see cref="IResult{TValue}"/>.
@@ -25,6 +25,9 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
 
     /// <inheritdoc />
     public bool IsSuccess => Errors.Count == 0;
+    
+    /// <inheritdoc />
+    public bool IsFailure => Errors.Count > 0;
 
     /// <inheritdoc />
     public TValue Value
@@ -69,10 +72,7 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
     /// </summary>
     /// <param name="value">The value to include in the result.</param>
     /// <returns>A new instance of <see cref="Result{TValue}"/> representing a success result with the specified value.</returns>
-    public static Result<TValue> Ok(TValue value)
-    {
-        return new Result<TValue> { Value = value };
-    }
+    public static Result<TValue> Ok(TValue value) => new() { Value = value };
 
     /// <summary>
     /// Creates a failed result.
@@ -89,37 +89,23 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
     /// <param name="errorMessage">The error message associated with the failure.</param>
     /// <param name="metadata">The metadata associated with the failure.</param>
     /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result with the specified error message.</returns>
-    public static Result<TValue> Fail(string errorMessage, (string Key, object Value) metadata)
-    {
-        var error = new Error(errorMessage, metadata);
-        return Fail(error);
-    }
+    public static Result<TValue> Fail(string errorMessage, (string Key, object Value) metadata) => Fail(new Error(errorMessage, metadata));
 
     /// <summary>Creates a failed result with the given error message and metadata.</summary>
     /// <param name="errorMessage">The error message associated with the failure.</param>
     /// <param name="metadata">The metadata associated with the failure.</param>
     /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result with the specified error message.</returns>
-    public static Result<TValue> Fail(string errorMessage, IDictionary<string, object> metadata)
-    {
-        var error = new Error(errorMessage, metadata);
-        return Fail(error);
-    }
+    public static Result<TValue> Fail(string errorMessage, IDictionary<string, object> metadata) => Fail(new Error(errorMessage, metadata));
 
     /// <summary>Creates a failed result with the given error.</summary>
     /// <param name="error">The error associated with the failure.</param>
     /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result with the specified error.</returns>
-    public static Result<TValue> Fail(IError error)
-    {
-        return new Result<TValue>(error);
-    }
+    public static Result<TValue> Fail(IError error) => new(error);
 
     /// <summary>Creates a failed result with the given errors.</summary>
     /// <param name="errors">A collection of errors associated with the failure.</param>
     /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result with the specified errors.</returns>
-    public static Result<TValue> Fail(IEnumerable<IError> errors)
-    {
-        return new Result<TValue>(errors);
-    }
+    public static Result<TValue> Fail(IEnumerable<IError> errors) => new(errors);
 
     /// <inheritdoc />
     public bool HasError<TError>()
@@ -141,11 +127,9 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
         if (IsSuccess)
         {
             onSuccess(Value);
+            return;
         }
-        else
-        {
-            onFailure(Errors);
-        }
+        onFailure(Errors);
     }
 
     /// <inheritdoc />
@@ -153,15 +137,8 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
         IsSuccess ? onSuccess(Value) : onFailure(Errors);
 
     /// <inheritdoc />
-    public Result<T> Match<T>(Func<TValue, IResult<T>> onSuccess) =>
+    public T Match<T>(Func<TValue, T> onSuccess) =>
         IsSuccess ? onSuccess(Value) : Result<T>.Fail(Errors);
-
-    /// <inheritdoc />
-    public IResult Match(Func<TValue, IResult> onSuccess) =>
-        IsSuccess ? onSuccess(Value) : src.Result.Fail(Errors);
-    
-    /// <inheritdoc />
-    public src.Result Test(src.Result some) {}
 
     /// <summary>
     /// Implicitly convert an error to a failed result.
@@ -170,8 +147,8 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
     /// <returns>A successful <see cref="Result{TValue}"/> with the value.</returns>
     public static implicit operator Result<TValue>(TValue value)
     {
-        if (value is Result<TValue> r)
-            return r;
+        if (value is Result<TValue> result)
+            return result;
 
         return Ok(value);
     }
@@ -181,60 +158,42 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
     /// </summary>
     /// <param name="error">The error to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result{TValue}"/> with the error.</returns>
-    public static implicit operator Result<TValue>(Error? error)
-    {
-        return Fail(error ?? Error.Empty);
-    }
+    public static implicit operator Result<TValue>(Error? error) => Fail(error ?? Error.Empty);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result{TValue}"/> with the errors.</returns>
-    public static implicit operator Result<TValue>(List<IError> errors)
-    {
-        return Fail(errors);
-    }
+    public static implicit operator Result<TValue>(List<IError> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result{TValue}"/> with the errors.</returns>
-    public static implicit operator Result<TValue>(HashSet<IError> errors)
-    {
-        return Fail(errors);
-    }
+    public static implicit operator Result<TValue>(HashSet<IError> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result{TValue}"/> with the errors.</returns>
-    public static implicit operator Result<TValue>(ImmutableList<IError> errors)
-    {
-        return Fail(errors);
-    }
+    public static implicit operator Result<TValue>(ImmutableList<IError> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a result to its value.
     /// </summary>
     /// <param name="result">The result to convert.</param>
     /// <returns>The value of the result.</returns>
-    public static implicit operator TValue(Result<TValue> result)
-    {
-        return result.Value;
-    }
+    public static implicit operator TValue(Result<TValue> result) => result.Value;
 
     /// <summary>
     /// Implicitly convert a result to its error list.
     /// </summary>
     /// <param name="result">The result to convert.</param>
     /// <returns>The error list of the result.</returns>
-    public static implicit operator ImmutableList<IError>(Result<TValue> result)
-    {
-        return result.Errors;
-    }
+    public static implicit operator ImmutableList<IError>(Result<TValue> result) => result.Errors;
 
     /// <summary>
     /// Deconstruct Result.
@@ -255,13 +214,13 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
         if (IsSuccess)
         {
             var valueString = ResultStringHelper.GetResultValueString(_valueOrDefault);
-            return ResultStringHelper.GetResultString(nameof(src.Result), "True", valueString);
+            return ResultStringHelper.GetResultString(nameof(Result), "True", valueString);
         }
 
         if (Errors[0].Message.Length == 0)
-            return $"{nameof(src.Result)} {{ IsSuccess = False }}";
+            return $"{nameof(Result)} {{ IsSuccess = False }}";
 
         var errorString = ResultStringHelper.GetResultErrorString(Errors);
-        return ResultStringHelper.GetResultString(nameof(src.Result), "False", errorString);
+        return ResultStringHelper.GetResultString(nameof(Result), "False", errorString);
     }
 }

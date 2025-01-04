@@ -1,4 +1,4 @@
-namespace Result.src;
+namespace Result;
 
 /// <summary>
 /// Default implementation of <see cref="IResult"/>.
@@ -20,6 +20,9 @@ public sealed partial class Result : IActionableResult<Result>
 
     /// <inheritdoc />
     public bool IsSuccess => Errors.Count == 0;
+    
+    /// <inheritdoc />
+    public bool IsFailure => Errors.Count > 0;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Result"/> class.
@@ -74,7 +77,17 @@ public sealed partial class Result : IActionableResult<Result>
         var allResults = new HashSet<Result> { this };
         allResults.UnionWith(results);
 
-        return global::Result.src.Result.MergeResults(allResults.ToArray());
+        return MergeResults(allResults.ToArray());
+    }
+
+    public void Match(Action onSuccess, Action<IEnumerable<IError>> onFailure)
+    {
+        if (IsSuccess)
+        {
+            onSuccess();
+            return;
+        }
+        onFailure(Errors);
     }
 
     /// <inheritdoc />
@@ -83,6 +96,18 @@ public sealed partial class Result : IActionableResult<Result>
 
     /// <inheritdoc />
     public Result Match(Func<Result> onSuccess) => IsSuccess ? onSuccess() : Fail(Errors);
+    
+    /// <inheritdoc />
+    public TDestinationResult Map<TDestinationResult>(Func<Result, TDestinationResult> mappingFunc)
+        where TDestinationResult : IResult => mappingFunc(this);
+    
+    /// <inheritdoc />
+    public Task<TDestinationResult> MapAsync<TDestinationResult>(Func<Result, Task<TDestinationResult>> mappingFunc)
+        where TDestinationResult : IResult => mappingFunc(this);
+
+    /// <inheritdoc />
+    public ValueTask<TDestinationResult> MapAsync<TDestinationResult>(Func<Result, ValueTask<TDestinationResult>> mappingFunc)
+        where TDestinationResult : IResult => mappingFunc(this);
     
     /// <inheritdoc />
     public static Result Fail(IError error) => new(error);
@@ -106,50 +131,35 @@ public sealed partial class Result : IActionableResult<Result>
     /// </summary>
     /// <param name="error">The error to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result"/> with the error.</returns>
-    public static implicit operator Result(Error? error)
-    {
-        return Fail(error ?? Error.Empty);
-    }
+    public static implicit operator Result(Error? error) => Fail(error ?? Error.Empty);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result"/> with the errors.</returns>
-    public static implicit operator Result(List<IError> errors)
-    {
-        return Fail(errors);
-    }
+    public static implicit operator Result(List<IError> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result"/> with the errors.</returns>
-    public static implicit operator Result(HashSet<IError> errors)
-    {
-        return Fail(errors);
-    }
+    public static implicit operator Result(HashSet<IError> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result"/> with the errors.</returns>
-    public static implicit operator Result(ImmutableList<IError> errors)
-    {
-        return Fail(errors);
-    }
+    public static implicit operator Result(ImmutableList<IError> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a result to its error list.
     /// </summary>
     /// <param name="result">The result to convert.</param>
     /// <returns>The error list of the result.</returns>
-    public static implicit operator ImmutableList<IError>(Result result)
-    {
-        return result.Errors;
-    }
+    public static implicit operator ImmutableList<IError>(Result result) => result.Errors;
 
     /// <summary>
     /// Deconstruct Result.

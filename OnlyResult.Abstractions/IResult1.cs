@@ -8,8 +8,12 @@ public interface IResult
     /// <summary>
     /// Gets a value indicating whether the result was successful.
     /// </summary>
-    /// <returns><c>true</c> if the result was successful; otherwise, <c>false</c>.</returns>
     bool IsSuccess { get; }
+    
+    /// <summary>
+    /// Gets a value indicating whether the result was a failure.
+    /// </summary>
+    bool IsFailure { get; }
 
     /// <summary>
     /// Gets a collection of errors associated with the result.

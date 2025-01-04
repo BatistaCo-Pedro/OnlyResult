@@ -1,4 +1,4 @@
-namespace Result.src;
+namespace Result.Helpers;
 
 /// <summary>
 /// Helper class for creating strings representing results and errors.

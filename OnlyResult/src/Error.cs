@@ -1,4 +1,4 @@
-﻿namespace Result.src;
+﻿namespace Result;
 
 /// <summary>
 /// Default implementation of the <see cref="IError"/> interface.

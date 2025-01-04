@@ -1,21 +1,18 @@
-namespace Result.src;
+namespace Result;
 
 /// <summary>
-/// Partial class of <see cref="src.Result.Result.Result{TValue}"/> for extensions.
+/// Partial class of <see cref="Result.Result"/> for extensions.
 /// </summary>
-/// <typeparam name="TValue">The type of the value.</typeparam>
 // ReSharper disable TemplateIsNotCompileTimeConstantProblem
-public sealed partial class Result<TValue>
+public sealed partial class Result
 {
     /// <inheritdoc />
-    public static Result<TValue> Try(
-        Func<TValue> func,
-        Func<Exception, IError>? exceptionHandler = null
-    )
+    public static Result Try(Action action, Func<Exception, IError>? exceptionHandler = null)
     {
         try
         {
-            return Ok(func());
+            action();
+            return Ok();
         }
         catch (Exception ex)
         {
@@ -24,14 +21,15 @@ public sealed partial class Result<TValue>
     }
 
     /// <inheritdoc />
-    public static async Task<Result<TValue>> TryAsync(
-        Func<Task<TValue>> func,
+    public static async Task<Result> TryAsync(
+        Func<Task> action,
         Func<Exception, IError>? exceptionHandler = null
     )
     {
         try
         {
-            return Ok(await func());
+            await action();
+            return Ok();
         }
         catch (Exception ex)
         {
@@ -40,18 +38,30 @@ public sealed partial class Result<TValue>
     }
 
     /// <inheritdoc />
-    public static async Task<Result<TValue>> TryAsync(
-        Func<ValueTask<TValue>> func,
+    public static async Task<Result> TryAsync(
+        Func<ValueTask> action,
         Func<Exception, IError>? exceptionHandler = null
     )
     {
         try
         {
-            return Ok(await func());
+            await action();
+            return Ok();
         }
         catch (Exception ex)
         {
             return Fail(exceptionHandler?.Invoke(ex) ?? new Error(ex.Message));
         }
+    }
+
+    /// <inheritdoc />
+    public static Result MergeResults(params Result[] results)
+    {
+        if (results.Length == 0 || results.All(x => x.IsSuccess))
+        {
+            return Ok();
+        }
+
+        return Fail(results.SelectMany(x => x.Errors));
     }
 }

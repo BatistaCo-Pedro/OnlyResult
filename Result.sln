@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Result", "Result\Result.csproj", "{5AC7403F-233B-4F18-9917-1CB742CDD231}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OnlyResult", "OnlyResult\OnlyResult.csproj", "{5AC7403F-233B-4F18-9917-1CB742CDD231}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Result.Abstractions", "Result.Abstractions\Result.Abstractions.csproj", "{41EE5933-22DE-4B22-B48D-B7CDE1525856}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OnlyResult.Abstractions", "OnlyResult.Abstractions\OnlyResult.Abstractions.csproj", "{41EE5933-22DE-4B22-B48D-B7CDE1525856}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

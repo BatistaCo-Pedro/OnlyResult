@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Result.Abstractions\Result.Abstractions.csproj" />
+      <ProjectReference Include="..\OnlyResult.Abstractions\OnlyResult.Abstractions.csproj" />
     </ItemGroup>
 
 </Project>

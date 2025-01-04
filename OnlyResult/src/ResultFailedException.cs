@@ -1,4 +1,4 @@
-namespace Result.src;
+namespace Result;
 
 /// <summary>
 /// Exception thrown when a result is failed.

@@ -3,13 +3,14 @@
 /// <summary>
 /// Defines an actionable result.
 /// </summary>
-public interface IActionableResult<TValue, TResult> : IResult<TValue>
-    where TResult : IActionableResult<TValue, TResult>
+public interface IActionableResult<TResult> : IResult
+    where TResult : IActionableResult<TResult>
 {
-    /// <summary>Creates a success result with the given value.</summary>
-    /// <param name="value">The value to include in the result.</param>
+    /// <summary>
+    /// Creates a success result.
+    /// </summary>
     /// <returns>A new instance of <typeparamref name="TResult" /> representing a success result with the specified value.</returns>
-    static abstract TResult Ok(TValue value);
+    static abstract TResult Ok();
 
     /// <summary>Creates a failed result.</summary>
     /// <returns>A new instance of <typeparamref name="TResult" /> representing a failed result.</returns>
@@ -47,9 +48,17 @@ public interface IActionableResult<TValue, TResult> : IResult<TValue>
     /// </summary>
     /// <param name="action">The action to wrap.</param>
     /// <param name="exceptionHandler">A custom exception handler to handle the caught exceptions.</param>
-    /// <returns>A result of type <see cref="TValue"/> representing the result from the action.</returns>
-    static abstract TResult Try(
-        Func<TValue> action,
+    /// <returns>A result representing the result from the action.</returns>
+    static abstract TResult Try(Action action, Func<Exception, IError>? exceptionHandler = null);
+
+    /// <summary>
+    /// Wraps an asynchronous action in a try-catch block and returns a result.
+    /// </summary>
+    /// <param name="action">The action to wrap.</param>
+    /// <param name="exceptionHandler">A custom exception handler to handle the caught exceptions.</param>
+    /// <returns>A result representing the result from the action.</returns>
+    static abstract Task<TResult> TryAsync(
+        Func<Task> action,
         Func<Exception, IError>? exceptionHandler = null
     );
 
@@ -58,22 +67,27 @@ public interface IActionableResult<TValue, TResult> : IResult<TValue>
     /// </summary>
     /// <param name="action">The action to wrap.</param>
     /// <param name="exceptionHandler">A custom exception handler to handle the caught exceptions.</param>
-    /// <returns>A result of type <see cref="TValue"/> representing the result from the action.</returns>
+    /// <returns>A result representing the result from the action.</returns>
     static abstract Task<TResult> TryAsync(
-        Func<Task<TValue>> action,
+        Func<ValueTask> action,
         Func<Exception, IError>? exceptionHandler = null
     );
 
     /// <summary>
-    /// Wraps an asynchronous action in a try-catch block and returns a result.
+    /// Merges all the results passed in. <br/>
+    /// If none of the results is failed, returns a successful result. <br/>
+    /// If any result is failed, merges all errors to one result.
     /// </summary>
-    /// <param name="action">The action to wrap.</param>
-    /// <param name="exceptionHandler">A custom exception handler to handle the caught exceptions.</param>
-    /// <returns>A result of type <see cref="TValue"/> representing the result from the action.</returns>
-    static abstract Task<TResult> TryAsync(
-        Func<ValueTask<TValue>> action,
-        Func<Exception, IError>? exceptionHandler = null
-    );
+    /// <param name="results">The <see cref="Result"/> objects to merge.</param>
+    /// <returns>A successful <see cref="Result"/> or one containing all merged errors.</returns>
+    static abstract TResult MergeResults(params TResult[] results);
+
+    /// <summary>
+    /// Merges the result with the results passed in.
+    /// </summary>
+    /// <param name="results">The results to merge with.</param>
+    /// <returns>A successful <see cref="Result"/> or one containing all merged errors.</returns>
+    TResult MergeWith(params TResult[] results);
 
     /// <summary>
     /// Matches a success and failure function for the result.
@@ -83,7 +97,7 @@ public interface IActionableResult<TValue, TResult> : IResult<TValue>
     /// <remarks>
     /// This method does not return a value.
     /// </remarks>
-    void Match(Action<TValue> onSuccess, Action<IEnumerable<IError>> onFailure);
+    void Match(Action onSuccess, Action<IEnumerable<IError>> onFailure);
 
     /// <summary>
     /// Matches a success and failure function for the result.
@@ -91,19 +105,8 @@ public interface IActionableResult<TValue, TResult> : IResult<TValue>
     /// <param name="onSuccess">The function to be called on success.</param>
     /// <param name="onFailure">The function to be called on failure.</param>
     /// <typeparam name="T">The return type.</typeparam>
-    /// <typeparam name="TValue">The type of the value contained within the result.</typeparam>
     /// <returns>An object of type <see cref="T"/>.</returns>
-    T Match<T>(Func<TValue, T> onSuccess, Func<IEnumerable<IError>, T> onFailure);
-
-    /// <summary>
-    /// Matches a success function for the result.
-    /// </summary>
-    /// <param name="onSuccess">The function to be called on success.</param>
-    /// <returns>A <see cref="IResult{T}"/> object representing the result of the operation.</returns>
-    /// <remarks>
-    /// This method uses a default failure function that returns a failed result with the errors in the result.
-    /// </remarks>
-    TActionableResult Match<TActionableResult>(Func<TValue, TActionableResult> onSuccess) where TActionableResult : IActionableResult<TValue, TActionableResult>;
+    T Match<T>(Func<T> onSuccess, Func<IEnumerable<IError>, T> onFailure);
 
     /// <summary>
     /// Matches a success function for the result.
@@ -113,5 +116,20 @@ public interface IActionableResult<TValue, TResult> : IResult<TValue>
     /// <remarks>
     /// This method uses a default failure function that returns a failed result with the errors in the result.
     /// </remarks>
-    IActionableResult<TR> Match<TR>(Func<TValue, IActionableResult<TR>> onSuccess) where TR : IActionableResult<TR>;
+    TResult Match(Func<TResult> onSuccess);
+
+    /// <summary>
+    ///
+    /// </summary>
+    /// <param name="mappingFunc"></param>
+    /// <typeparam name="TDestinationResult"></typeparam>
+    /// <returns></returns>
+    TDestinationResult Map<TDestinationResult>(Func<TResult, TDestinationResult> mappingFunc)
+        where TDestinationResult : IResult;
+    
+    Task<TDestinationResult> MapAsync<TDestinationResult>(Func<TResult, Task<TDestinationResult>> mappingFunc)
+        where TDestinationResult : IResult;
+    
+    ValueTask<TDestinationResult> MapAsync<TDestinationResult>(Func<TResult, ValueTask<TDestinationResult>> mappingFunc)
+        where TDestinationResult : IResult;
 }
