@@ -5,8 +5,19 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Result</RootNamespace>
+        <PackageId>OnlyResult</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Pedro Baptista</Authors>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+        <PackageProjectUrl>https://github.com/BatistaCo-Pedro/OnlyResult</PackageProjectUrl>
     </PropertyGroup>
 
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath=""/>
+        <None Include="LICENSE.md" Pack="true" PackagePath=""/>
+    </ItemGroup>
+    
     <ItemGroup>
       <ProjectReference Include="..\OnlyResult.Abstractions\OnlyResult.Abstractions.csproj" />
     </ItemGroup>
