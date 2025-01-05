@@ -1,4 +1,4 @@
-namespace Result.Abstractions;
+namespace OnlyResult.Abstractions;
 
 /// <summary>
 /// Defines an error with a message and associated metadata.

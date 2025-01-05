@@ -1,4 +1,4 @@
-namespace Result;
+namespace OnlyResult;
 
 /// <summary>
 /// Exception thrown when a result is failed.

@@ -1,4 +1,4 @@
-namespace Result;
+namespace OnlyResult;
 
 /// <summary>
 /// Partial class of <see cref="Result.Result.Result.Result{TValue}"/> for extensions.

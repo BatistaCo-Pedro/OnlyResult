@@ -1,4 +1,4 @@
-﻿namespace Result.Abstractions;
+﻿namespace OnlyResult.Abstractions;
 
 /// <summary>
 /// Defines an actionable result.
@@ -78,15 +78,15 @@ public interface IActionableResult<TResult> : IResult
     /// If none of the results is failed, returns a successful result. <br/>
     /// If any result is failed, merges all errors to one result.
     /// </summary>
-    /// <param name="results">The <see cref="Result"/> objects to merge.</param>
-    /// <returns>A successful <see cref="Result"/> or one containing all merged errors.</returns>
+    /// <param name="results">The <see cref="OnlyResult"/> objects to merge.</param>
+    /// <returns>A successful <see cref="OnlyResult"/> or one containing all merged errors.</returns>
     static abstract TResult MergeResults(params TResult[] results);
 
     /// <summary>
     /// Merges the result with the results passed in.
     /// </summary>
     /// <param name="results">The results to merge with.</param>
-    /// <returns>A successful <see cref="Result"/> or one containing all merged errors.</returns>
+    /// <returns>A successful <see cref="OnlyResult"/> or one containing all merged errors.</returns>
     TResult MergeWith(params TResult[] results);
 
     /// <summary>
@@ -112,7 +112,7 @@ public interface IActionableResult<TResult> : IResult
     /// Matches a success function for the result.
     /// </summary>
     /// <param name="onSuccess">The function to be called on success.</param>
-    /// <returns>A <see cref="Result"/> object representing the result of the operation.</returns>
+    /// <returns>A <see cref="OnlyResult"/> object representing the result of the operation.</returns>
     /// <remarks>
     /// This method uses a default failure function that returns a failed result with the errors in the result.
     /// </remarks>

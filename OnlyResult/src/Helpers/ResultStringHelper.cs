@@ -1,4 +1,6 @@
-namespace Result.Helpers;
+using OnlyResult.Abstractions;
+
+namespace OnlyResult.Helpers;
 
 /// <summary>
 /// Helper class for creating strings representing results and errors.

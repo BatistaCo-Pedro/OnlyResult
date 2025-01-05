@@ -2,5 +2,5 @@
 
 global using System.Collections.Frozen;
 global using System.Collections.Immutable;
-global using Result.Abstractions;
-global using Result.Helpers;
+global using OnlyResult.Abstractions;
+global using OnlyResult.Helpers;

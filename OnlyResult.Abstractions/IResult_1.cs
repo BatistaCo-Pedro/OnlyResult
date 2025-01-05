@@ -1,4 +1,4 @@
-﻿namespace Result.Abstractions;
+﻿namespace OnlyResult.Abstractions;
 
 /// <summary>
 /// Interface for a typed result.
