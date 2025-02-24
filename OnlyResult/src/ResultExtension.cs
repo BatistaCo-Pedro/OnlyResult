@@ -1,13 +1,12 @@
 namespace OnlyResult;
 
 /// <summary>
-/// Partial class of <see cref="Result.Result"/> for extensions.
+/// Partial class of <see cref="OnlyResult.Result"/> for extensions.
 /// </summary>
 // ReSharper disable TemplateIsNotCompileTimeConstantProblem
-public sealed partial class Result
+public partial class Result
 {
-    /// <inheritdoc />
-    public static Result Try(Action action, Func<Exception, IError>? exceptionHandler = null)
+    public static Result Try(Action action, Func<Exception, Error>? exceptionHandler = null)
     {
         try
         {
@@ -20,10 +19,9 @@ public sealed partial class Result
         }
     }
 
-    /// <inheritdoc />
     public static async Task<Result> TryAsync(
         Func<Task> action,
-        Func<Exception, IError>? exceptionHandler = null
+        Func<Exception, Error>? exceptionHandler = null
     )
     {
         try
@@ -37,10 +35,9 @@ public sealed partial class Result
         }
     }
 
-    /// <inheritdoc />
     public static async Task<Result> TryAsync(
         Func<ValueTask> action,
-        Func<Exception, IError>? exceptionHandler = null
+        Func<Exception, Error>? exceptionHandler = null
     )
     {
         try
@@ -53,9 +50,16 @@ public sealed partial class Result
             return Fail(exceptionHandler?.Invoke(ex) ?? new Error(ex.Message));
         }
     }
+    
+    public Result MergeWith(params IResult<Error>[] results)
+    {
+        var allResults = new HashSet<IResult<Error>> { this };
+        allResults.UnionWith(results);
 
-    /// <inheritdoc />
-    public static Result MergeResults(params Result[] results)
+        return MergeResults(allResults.ToArray());
+    }
+    
+    public static Result MergeResults(params IResult<Error>[] results)
     {
         if (results.Length == 0 || results.All(x => x.IsSuccess))
         {

@@ -1,8 +1,9 @@
-﻿namespace OnlyResult;
+﻿namespace OnlyResult.Errors;
 
 /// <summary>
 /// Default implementation of the <see cref="IError"/> interface.
 /// </summary>
+[Serializable]
 public class Error : IError
 {
     /// <summary>
@@ -11,10 +12,12 @@ public class Error : IError
     public static Error Empty { get; } = new();
 
     /// <inheritdoc />
+    [JsonPropertyName("message")]
     public string Message { get; }
 
     /// <inheritdoc />
-    public FrozenDictionary<string, object> Metadata { get; }
+    [JsonPropertyName("metadata")]
+    public ImmutableDictionary<string, string> Metadata { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="IError"/> class.
@@ -30,7 +33,7 @@ public class Error : IError
     public Error(string message)
     {
         Message = message;
-        Metadata = FrozenDictionary<string, object>.Empty;
+        Metadata = ImmutableDictionary<string, string>.Empty;
     }
 
     /// <summary>
@@ -42,21 +45,17 @@ public class Error : IError
     public Error(string message, (string Key, object Value) metadata)
     {
         Message = message;
-        var dictionary = new Dictionary<string, object> { { metadata.Key, metadata.Value } };
-        Metadata = dictionary.ToFrozenDictionary();
+        var dictionary = new Dictionary<string, string> { { metadata.Key, metadata.Value.ToString() ?? string.Empty } };
+        Metadata = dictionary.ToImmutableDictionary();
     }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Error"/>
-    /// class with the specified error message and metadata.</summary>
-    /// <param name="message">The error message.</param>
-    /// <param name="metadata">The metadata associated with the error.</param>
-    public Error(string message, IDictionary<string, object> metadata)
+    
+    [JsonConstructor]
+    public Error(string message, ImmutableDictionary<string, string> metadata)
     {
         Message = message;
-        Metadata = metadata.ToFrozenDictionary();
+        Metadata = metadata;
     }
 
     /// <inheritdoc />
-    public override string ToString() => ResultStringHelper.GetErrorString(this);
+    public override string ToString() => JsonSerializer.Serialize(this);
 }

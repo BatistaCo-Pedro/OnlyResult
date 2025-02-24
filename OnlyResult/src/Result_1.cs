@@ -8,137 +8,114 @@ namespace OnlyResult;
 /// Structs don't return null, instead they return their default value.
 /// There might be a need to handle classes and structs differently.
 /// </remarks>
-public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TValue>>
+[Serializable]
+public partial class Result<TValue> : Result, IResult<TValue, Result<TValue>, Error>
 {
-    /// <summary>
-    /// Pre allocated instance of <see cref="Result{TValue}"/> representing a failed result.
-    /// </summary>
-    private static readonly Result<TValue> FailedResult = new(Error.Empty);
-
-    /// <inheritdoc />
-    public ImmutableList<IError> Errors { get; }
-
     /// <summary>
     /// The value of the result or null.
     /// </summary>
-    private readonly TValue? _valueOrDefault;
+    [JsonPropertyName("valueOrDefault")]
+    public TValue? ValueOrDefault { get; protected init; }
 
     /// <inheritdoc />
-    public bool IsSuccess => Errors.Count == 0;
-    
-    /// <inheritdoc />
-    public bool IsFailure => Errors.Count > 0;
-
-    /// <inheritdoc />
+    [JsonIgnore]
     public TValue Value
     {
         get
         {
             ThrowIfFailed();
-            return _valueOrDefault!;
+            return ValueOrDefault!;
         }
-        private init => _valueOrDefault = value;
+        init
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+            ValueOrDefault = value;
+        }
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Result{TValue}"/> class.
-    /// </summary>
-    private Result()
-    {
-        Errors = [];
-    }
+    protected Result() { }
 
     /// <summary>
     /// Initializes a new instance of the<see cref="Result{TValue}"/> class with the specified error.
     /// </summary>
     /// <param name="error">The error to initialize with.</param>
-    private Result(IError error)
+    protected Result(Error error)
+        : base(error) { }
+
+    protected Result(TValue value)
     {
-        Errors = [error];
+        Value = value;
     }
 
     /// <summary>
     /// Initializes a new instance of the<see cref="Result{TValue}"/> class with the specified errors.
     /// </summary>
     /// <param name="errors">The errors to initialize with.</param>
-    private Result(IEnumerable<IError> errors)
+    protected Result(ImmutableList<Error> errors)
+        : base(errors) { }
+
+    [JsonConstructor]
+    protected Result(ImmutableList<Error> errors, TValue? value)
+        : base(errors)
     {
-        // ReSharper disable once UseCollectionExpression
-        Errors = errors.ToImmutableList();
+        ValueOrDefault = value;
     }
 
-    /// <summary>
-    /// Creates a success result with the specified value.
-    /// </summary>
-    /// <param name="value">The value to include in the result.</param>
-    /// <returns>A new instance of <see cref="Result{TValue}"/> representing a success result with the specified value.</returns>
-    public static Result<TValue> Ok(TValue value) => new() { Value = value };
+    /// <inheritdoc />
+    public static Result<TValue> Ok(TValue value) => new(value);
 
-    /// <summary>
-    /// Creates a failed result.
-    /// </summary>
-    /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result.</returns>
-    public static Result<TValue> Fail() => FailedResult;
+    public static new Result<TValue> Fail(Error error) => new(error);
 
     /// <summary>Creates a failed result with the given error message.</summary>
     /// <param name="errorMessage">The error message associated with the failure.</param>
     /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result with the specified error message.</returns>
-    public static Result<TValue> Fail(string errorMessage) => Fail(new Error(errorMessage));
+    public new static Result<TValue> Fail(string errorMessage) => Fail(new Error(errorMessage));
 
-    /// <summary>Creates a failed result with the given error message and metadata.</summary>
-    /// <param name="errorMessage">The error message associated with the failure.</param>
-    /// <param name="metadata">The metadata associated with the failure.</param>
-    /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result with the specified error message.</returns>
-    public static Result<TValue> Fail(string errorMessage, (string Key, object Value) metadata) => Fail(new Error(errorMessage, metadata));
+    public static new Result<TValue> Fail(IEnumerable<Error> errors) =>
+        new(errors.ToImmutableList());
 
-    /// <summary>Creates a failed result with the given error message and metadata.</summary>
-    /// <param name="errorMessage">The error message associated with the failure.</param>
-    /// <param name="metadata">The metadata associated with the failure.</param>
-    /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result with the specified error message.</returns>
-    public static Result<TValue> Fail(string errorMessage, IDictionary<string, object> metadata) => Fail(new Error(errorMessage, metadata));
-
-    /// <summary>Creates a failed result with the given error.</summary>
-    /// <param name="error">The error associated with the failure.</param>
-    /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result with the specified error.</returns>
-    public static Result<TValue> Fail(IError error) => new(error);
-
-    /// <summary>Creates a failed result with the given errors.</summary>
-    /// <param name="errors">A collection of errors associated with the failure.</param>
-    /// <returns>A new instance of <see cref="Result{TValue}"/> representing a failed result with the specified errors.</returns>
-    public static Result<TValue> Fail(IEnumerable<IError> errors) => new(errors);
-
-    /// <inheritdoc />
-    public bool HasError<TError>()
-        where TError : IError => Errors.Any(e => e is TError);
-
-    /// <inheritdoc />
-    public bool HasError(Type errorType) => Errors.Any(e => e.GetType() == errorType);
-
-    /// <inheritdoc />
-    public void ThrowIfFailed()
+    public Result<TValueToKeep> MergeWith<TValueToKeep>(params Result<TValue>[] results)
     {
-        if (!IsSuccess)
-            throw new ResultFailedException(this);
+        var allResults = new HashSet<Result<TValue>> { this };
+        allResults.UnionWith(results);
+
+        return MergeResults<TValueToKeep>(allResults.ToArray());
     }
 
-    /// <inheritdoc />
-    public void Match(Action<TValue> onSuccess, Action<IEnumerable<IError>> onFailure)
+    public static Result<TValueToKeep> MergeResults<TValueToKeep>(params Result<TValue>[] results)
     {
-        if (IsSuccess)
+        TValueToKeep? valueToKeep = default;
+        foreach (var result in results)
         {
-            onSuccess(Value);
-            return;
+            if (result.ValueOrDefault is TValueToKeep value)
+            {
+                valueToKeep = value;
+            }
+
+            if (result.IsFailure)
+            {
+                break;
+            }
         }
-        onFailure(Errors);
+
+        return valueToKeep?.Equals(default(TValueToKeep)) is true or null
+            ? Result<TValueToKeep>.Fail(results.SelectMany(x => x.Errors))
+            : Result<TValueToKeep>.Ok(valueToKeep);
     }
 
     /// <inheritdoc />
-    public T Match<T>(Func<TValue, T> onSuccess, Func<IEnumerable<IError>, T> onFailure) =>
+    public Result<TValue> Match(Func<Result<TValue>> onSuccess) => IsSuccess ? onSuccess() : this;
+
+    /// <inheritdoc />
+    public T Match<T>(Func<TValue, T> onSuccess, Func<IEnumerable<Error>, T> onFailure) =>
         IsSuccess ? onSuccess(Value) : onFailure(Errors);
 
     /// <inheritdoc />
-    public T Match<T>(Func<TValue, T> onSuccess) =>
-        IsSuccess ? onSuccess(Value) : Result<T>.Fail(Errors);
+    public Result<TValue> Match(Func<TValue, Result<TValue>> onSuccess) =>
+        IsSuccess ? onSuccess(Value) : this;
 
     /// <summary>
     /// Implicitly convert an error to a failed result.
@@ -165,21 +142,21 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result{TValue}"/> with the errors.</returns>
-    public static implicit operator Result<TValue>(List<IError> errors) => Fail(errors);
+    public static implicit operator Result<TValue>(List<Error> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result{TValue}"/> with the errors.</returns>
-    public static implicit operator Result<TValue>(HashSet<IError> errors) => Fail(errors);
+    public static implicit operator Result<TValue>(HashSet<Error> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result{TValue}"/> with the errors.</returns>
-    public static implicit operator Result<TValue>(ImmutableList<IError> errors) => Fail(errors);
+    public static implicit operator Result<TValue>(ImmutableList<Error> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a result to its value.
@@ -193,7 +170,7 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
     /// </summary>
     /// <param name="result">The result to convert.</param>
     /// <returns>The error list of the result.</returns>
-    public static implicit operator ImmutableList<IError>(Result<TValue> result) => result.Errors;
+    public static implicit operator ImmutableList<Error>(Result<TValue> result) => result.Errors;
 
     /// <summary>
     /// Deconstruct Result.
@@ -201,26 +178,13 @@ public sealed partial class Result<TValue> : IActionableResult<TValue, Result<TV
     /// <param name="isSuccess">Bool defining if the result is successful.</param>
     /// <param name="value">The value of the result in case of success or the default of the value.</param>
     /// <param name="errors">The errors from the result - empty in case of success.</param>
-    public void Deconstruct(out bool isSuccess, out TValue? value, out ImmutableList<IError> errors)
+    public void Deconstruct(out bool isSuccess, out TValue? value, out ImmutableList<Error> errors)
     {
         isSuccess = IsSuccess;
-        value = _valueOrDefault;
+        value = ValueOrDefault;
         errors = Errors;
     }
 
     /// <inheritdoc />
-    public override string ToString()
-    {
-        if (IsSuccess)
-        {
-            var valueString = ResultStringHelper.GetResultValueString(_valueOrDefault);
-            return ResultStringHelper.GetResultString(nameof(Result), "True", valueString);
-        }
-
-        if (Errors[0].Message.Length == 0)
-            return $"{nameof(Result)} {{ IsSuccess = False }}";
-
-        var errorString = ResultStringHelper.GetResultErrorString(Errors);
-        return ResultStringHelper.GetResultString(nameof(Result), "False", errorString);
-    }
+    public override string ToString() => JsonSerializer.Serialize(this);
 }

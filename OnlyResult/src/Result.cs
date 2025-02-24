@@ -1,33 +1,43 @@
 namespace OnlyResult;
 
 /// <summary>
-/// Default implementation of <see cref="IResult"/>.
+/// Default implementation of <see cref="IResult{TResult, TError}"/>.
 /// </summary>
-public sealed partial class Result : IActionableResult<Result>
+[Serializable]
+public partial class Result : IResult<Result, Error>
 {
     /// <summary>
     /// Pre allocated instance of <see cref="Result"/> representing a successful result.
     /// </summary>
     private static readonly Result OkResult = new();
 
-    /// <summary>
-    /// Pre allocated instance of <see cref="Result"/> representing a failed result.
-    /// </summary>
-    private static readonly Result FailedResult = new(Error.Empty);
+    /// <inheritdoc />
+    [JsonPropertyName("errors")]
+    public ImmutableList<Error> Errors { get; protected init; }
 
     /// <inheritdoc />
-    public ImmutableList<IError> Errors { get; }
-
-    /// <inheritdoc />
+    [JsonPropertyName("isSuccess")]
     public bool IsSuccess => Errors.Count == 0;
     
     /// <inheritdoc />
+    [JsonIgnore]
     public bool IsFailure => Errors.Count > 0;
+    
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Result"/> class with the specified errors.
+    /// Used for serialization.
+    /// </summary>
+    /// <param name="errors">The errors to set.</param>
+    [JsonConstructor]
+    protected Result(ImmutableList<Error> errors)
+    {
+        Errors = errors;
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Result"/> class.
     /// </summary>
-    private Result()
+    protected Result()
     {
         Errors = [];
     }
@@ -36,51 +46,28 @@ public sealed partial class Result : IActionableResult<Result>
     /// Initializes a new instance of the <see cref="Result"/> class with the specified error.
     /// </summary>
     /// <param name="error">The error to initialize with.</param>
-    private Result(IError error)
+    protected Result(Error error)
     {
         Errors = [error];
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Result"/> class with the specified errors.
+    /// 
     /// </summary>
-    /// <param name="errors">The errors to initialize with.</param>
-    private Result(IEnumerable<IError> errors)
-    {
-        // ReSharper disable once UseCollectionExpression
-        Errors = errors.ToImmutableList();
-    }
-
-    /// <inheritdoc />
+    /// <returns></returns>
     public static Result Ok() => OkResult;
 
     /// <inheritdoc />
-    public static Result Fail() => FailedResult;
+    public static Result Fail(Error error) => new(error);
 
     /// <inheritdoc />
     public static Result Fail(string errorMessage) => Fail(new Error(errorMessage));
 
     /// <inheritdoc />
-    public static Result Fail(string errorMessage, (string Key, object Value) metadata) =>
-        Fail(new Error(errorMessage, metadata));
-
+    public static Result Fail(IEnumerable<Error> errors) => new(errors.ToImmutableList());
+    
     /// <inheritdoc />
-    public static Result Fail(string errorMessage, IDictionary<string, object> metadata) =>
-        Fail(new Error(errorMessage, metadata));
-
-    /// <inheritdoc />
-    public static Result Fail(IEnumerable<IError> errors) => new(errors);
-
-    /// <inheritdoc />
-    public Result MergeWith(params Result[] results)
-    {
-        var allResults = new HashSet<Result> { this };
-        allResults.UnionWith(results);
-
-        return MergeResults(allResults.ToArray());
-    }
-
-    public void Match(Action onSuccess, Action<IEnumerable<IError>> onFailure)
+    public void Match(Action onSuccess, Action<IEnumerable<Error>> onFailure)
     {
         if (IsSuccess)
         {
@@ -91,39 +78,23 @@ public sealed partial class Result : IActionableResult<Result>
     }
 
     /// <inheritdoc />
-    public T Match<T>(Func<T> onSuccess, Func<IEnumerable<IError>, T> onFailure) =>
+    public T Match<T>(Func<T> onSuccess, Func<IEnumerable<Error>, T> onFailure) =>
         IsSuccess ? onSuccess() : onFailure(Errors);
 
     /// <inheritdoc />
-    public Result Match(Func<Result> onSuccess) => IsSuccess ? onSuccess() : Fail(Errors);
+    public Result Match(Func<Result> onSuccess) => IsSuccess ? onSuccess() : this;
     
-    /// <inheritdoc />
-    public TDestinationResult Map<TDestinationResult>(Func<Result, TDestinationResult> mappingFunc)
-        where TDestinationResult : IResult => mappingFunc(this);
+    public async Task<T> MatchAsync<T>(Func<Task<T>> onSuccess, Func<IEnumerable<Error>, Task<T>> onFailure) =>
+        IsSuccess ? await onSuccess() : await onFailure(Errors);
     
-    /// <inheritdoc />
-    public Task<TDestinationResult> MapAsync<TDestinationResult>(Func<Result, Task<TDestinationResult>> mappingFunc)
-        where TDestinationResult : IResult => mappingFunc(this);
+    public async Task<Result> MatchAsync(Func<Task<Result>> onSuccess) =>
+        IsSuccess ? await onSuccess() : this;
 
     /// <inheritdoc />
-    public ValueTask<TDestinationResult> MapAsync<TDestinationResult>(Func<Result, ValueTask<TDestinationResult>> mappingFunc)
-        where TDestinationResult : IResult => mappingFunc(this);
-    
-    /// <inheritdoc />
-    public static Result Fail(IError error) => new(error);
-
-    /// <inheritdoc />
-    public bool HasError<TError>()
-        where TError : IError => Errors.Any(e => e is TError);
-
-    /// <inheritdoc />
-    public bool HasError(Type errorType) => Errors.Any(e => e.GetType() == errorType);
-
-    /// <inheritdoc />
-    public void ThrowIfFailed()
+    public virtual void ThrowIfFailed()
     {
         if (!IsSuccess)
-            throw new ResultFailedException(this);
+            throw new ResultFailedException<Error>(this);
     }
 
     /// <summary>
@@ -138,50 +109,40 @@ public sealed partial class Result : IActionableResult<Result>
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result"/> with the errors.</returns>
-    public static implicit operator Result(List<IError> errors) => Fail(errors);
+    public static implicit operator Result(List<Error> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result"/> with the errors.</returns>
-    public static implicit operator Result(HashSet<IError> errors) => Fail(errors);
+    public static implicit operator Result(HashSet<Error> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a list of errors to a failed result.
     /// </summary>
     /// <param name="errors">The errors to convert and include in the result.</param>
     /// <returns>A failed <see cref="Result"/> with the errors.</returns>
-    public static implicit operator Result(ImmutableList<IError> errors) => Fail(errors);
+    public static implicit operator Result(ImmutableList<Error> errors) => Fail(errors);
 
     /// <summary>
     /// Implicitly convert a result to its error list.
     /// </summary>
     /// <param name="result">The result to convert.</param>
     /// <returns>The error list of the result.</returns>
-    public static implicit operator ImmutableList<IError>(Result result) => result.Errors;
+    public static implicit operator ImmutableList<Error>(Result result) => result.Errors;
 
     /// <summary>
     /// Deconstruct Result.
     /// </summary>
     /// <param name="isSuccess">Bool defining if the result is successful.</param>
     /// <param name="errors">The errors from the result - empty in case of success.</param>
-    public void Deconstruct(out bool isSuccess, out ImmutableList<IError> errors)
+    public void Deconstruct(out bool isSuccess, out ImmutableList<Error> errors)
     {
         isSuccess = IsSuccess;
         errors = Errors;
     }
 
     /// <inheritdoc />
-    public override string ToString()
-    {
-        if (IsSuccess)
-            return $"{nameof(Result)} {{ IsSuccess = True }}";
-
-        if (Errors[0].Message.Length == 0)
-            return $"{nameof(Result)} {{ IsSuccess = False }}";
-
-        var errorString = ResultStringHelper.GetResultErrorString(Errors);
-        return ResultStringHelper.GetResultString(nameof(Result), "False", errorString);
-    }
+    public override string ToString() => JsonSerializer.Serialize(this);
 }

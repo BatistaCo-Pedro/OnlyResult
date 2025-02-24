@@ -14,5 +14,5 @@ public interface IError
     /// Gets the metadata associated with the error.
     /// </summary>
     /// <remarks>The metadata is represented as a dictionary of key-value pairs.</remarks>
-    public FrozenDictionary<string, object> Metadata { get; }
+    public ImmutableDictionary<string, string> Metadata { get; }
 }
